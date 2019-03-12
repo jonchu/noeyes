@@ -15,12 +15,16 @@ def app():
 
     app = create_app({
         'TESTING': True,
-        'DATABASE': db_path,
+        'DATABASE': os.sep.join(['sqlite:///', db_path]),
     })
 
     with app.app_context():
         init_db()
-        get_db().executescript(_data_sql)
+
+        for stmt in _data_sql.split(';'):
+            get_db().execute(stmt)
+
+        get_db().commit()
 
     yield app
 

@@ -1,20 +1,17 @@
-import sqlite3
-
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from flaskr.schema import Base
 
 
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            current_app.config['DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = sqlite3.Row
-
+        engine = create_engine(current_app.config['DATABASE'])
+        Session = sessionmaker(bind=engine)
+        g.db = Session()
     return g.db
-
 
 def close_db(e=None):
     db = g.pop('db', None)
@@ -23,10 +20,9 @@ def close_db(e=None):
         db.close()
 
 def init_db():
-    db = get_db()
-
-    with current_app.open_resource('schema.sql') as f:
-        db.executescript(f.read().decode('utf8'))
+    session = get_db()
+    Base.metadata.drop_all(session.get_bind())
+    Base.metadata.create_all(session.get_bind())
 
 @click.command('init-db')
 @with_appcontext
